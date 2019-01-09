@@ -54,4 +54,24 @@ def getEventStartEnd(event):
         
     return start_time,end_time,whole_day_event
 
+def eventCreator(start_string, end_string, reschedulability, 
+                 expirary_date, event_type, urgency,
+                 importance, custom_name = -1)
+    if custom_name == -1:
+        custom_name = event_type
+    event = {
+            "start":{"dateTime":start_string},
+            "end":{"dateTime":end_string},
+            "summary": event_type,
+            }
+    
+    description_info = ("&reschedulability:" + str(reschedulability) +
+                       "&expirary_date:" + str(expirary_date) +
+                       "&event_type:" + str(event_type) +
+                       "&urgency:" + str(urgency) +
+                       "&importance:" + str(importance) )
+    
+                       
+
+
 
