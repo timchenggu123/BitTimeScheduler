@@ -10,7 +10,7 @@ import calendarHelperFun as calhelp
 import connection 
 
 # If modifying these scopes, delete the file token.json.
-SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
+SCOPES = 'https://www.googleapis.com/auth/calendar'
 
 def main():
     service = connection.googleCalendar(SCOPES)
@@ -42,7 +42,7 @@ def main():
         duration_mins = duration_mins[0] + duration_mins[1]
         print(duration_mins, event['summary'])
         
-def freetimecheck():
+def freetimeevent():
     service = connection.googleCalendar(SCOPES)
     
     # Call the Calendar API
@@ -50,19 +50,37 @@ def freetimecheck():
     print('Getting the upcoming 10 events')
     events_result = service.events().list(calendarId='t4p9h18kn9ka3nf8sf6teobfbfouoo6t@import.calendar.google.com',
                                         timeMin=now,
-                                        maxResults=10, singleEvents=True,
+                                        maxResults=5, singleEvents=True,
                                         orderBy='startTime').execute()
     events = events_result.get('items', [])
 
     if not events:
         print('No upcoming events found.')
+        
+    end_time = datetime.datetime.now()
     for event in events:
-        start_time, end_time = calhelp.getEventStartEnd(event)
-        duration = end_time - start_time
-        duration_mins = divmod(duration.total_seconds(),60)
-        duration_mins = duration_mins[0] + duration_mins[1]
-        print(duration_mins, event['summary'])
+        
+        start_string = calhelp.time2str(end_time) #curr start time is the prev end time
+        print(start_string)
+        _,_, is_whole_day = calhelp.getEventStartEnd(event)
+        print(is_whole_day)
+        
+        if is_whole_day:
+            continue
+        else:
+            start_time,end_time,_ = calhelp.getEventStartEnd(event)
+        end_string = calhelp.time2str(start_time) #the curr end time is the next start time
+        
+        print(start_string)
+        print(end_string)
+        new_event = {
+                "start":{"dateTime":start_string},
+                "end":{"dateTime":end_string},
+                "summary":"Free Time",
+                }
+        
+        service.events().insert(calendarId = "primary",body = new_event).execute()
         
         
 if __name__ == '__main__':
-    freetimecheck()
+    freetimeevent()

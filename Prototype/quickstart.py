@@ -26,14 +26,14 @@ def main():
     print('Getting the upcoming 10 events')
     events_result = service.events().list(calendarId='t4p9h18kn9ka3nf8sf6teobfbfouoo6t@import.calendar.google.com',
                                         timeMin=now,
-                                        maxResults=10, singleEvents=True,
+                                        maxResults=30, singleEvents=True,
                                         orderBy='startTime').execute()
     events = events_result.get('items', [])
 
     if not events:
         print('No upcoming events found.')
     for event in events:
-        start = event['start'].get('dateTime',5)
+        start = event['start'].get('dateTime',event['start'].get('date'))
         print(start, event['summary'])
 
 if __name__ == '__main__':

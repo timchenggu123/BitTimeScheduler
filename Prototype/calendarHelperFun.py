@@ -16,6 +16,11 @@ def str2time(string):
     
     return dt
 
+def time2str(datetime):
+    timeformat = ('%Y-%m-%dT%H:%M:%S-05:00')
+    
+    return(datetime.strftime(timeformat))
+    
 def minsLeftinWeek():
     now = datetime.datetime.now()
     day = now.weekday()
@@ -31,19 +36,22 @@ def minsLeftinWeek():
 
     print('You have ' + str(total_remain_mins) + ' minutes left this week!')
     
-minsLeftinWeek()
 
 def getEventStartEnd(event):
     '''returns start time & end time as datetime objects from an event struct'''
+    
     start_string = event['start'].get('dateTime',event['start'].get('date'))
     start_time = str2time(start_string)
     
     end_string = event['end'].get('dateTime',0)
+    
+    whole_day_event = 0
     if not end_string:
         end_time = start_time + datetime.timedelta(days = 1)
+        whole_day_event = 1
     else:
         end_time = str2time(end_string)
         
-    return start_time,end_time
+    return start_time,end_time,whole_day_event
 
 
