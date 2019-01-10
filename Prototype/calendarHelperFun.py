@@ -1,4 +1,4 @@
-import datetime 
+import datetime, pytz
 
 def str2time(string):
 
@@ -54,14 +54,22 @@ def getEventStartEnd(event):
         
     return start_time,end_time,whole_day_event
 
-def eventCreator(start_string, end_string, reschedulability, 
+def eventCreator(start, end, reschedulability, 
                  expirary_date, event_type, urgency,
                  importance, custom_name = -1, extensibility = 0):
+
     if custom_name == -1:
         custom_name = event_type
+    
+    if not type(start) is str:
+        start = time2str(start)
+    
+    if not type(end) is str:
+        end = time2str(end)
+        
     event = {
-            "start":{"dateTime":start_string},
-            "end":{"dateTime":end_string},
+            "start":{"dateTime":start},
+            "end":{"dateTime":end},
             "summary": custom_name,
             }
     
@@ -70,12 +78,125 @@ def eventCreator(start_string, end_string, reschedulability,
                        "&event_type:" + str(event_type) +
                        "&urgency:" + str(urgency) +
                        "&importance:" + str(importance) )
+    
     event['description'] = description_info
+    event_duration_timedelta = str2time(start) - str2time(end)
+    event_duration = divmod(event_duration_timedelta.total_seconds(),60)
+    event['duration'] = event_duration
     
     return event
 
+def daily_insert(service,event,time_begin,duration,
+                 effective_days,date_start = datetime.datetime.today(),
+                 repeat_on_day_of_week = {0,1,2,3,4,5,6}):
+    """
+    
+        service: googleCalendar API connection. See connection.py
+        event: event struct. Can be created from eventCreator()
+        ***Note that event does not need to contain start and end dates. If it
+        does, then it is going to overwritten***
+        
+        repeat_on_day_of_week: an integer list with len 1~7 and values 0-6 each integer
+            value represent a day of week. e.g. 0 is Monday, 2 is Wednesday, etc. This determines
+            on what day of the week the event shall repeat
+        time_start: datetime.time() object. When the event take place on each day
+        even_duartion: datetime.timedelta() object. Duration of the event
+        effective_days: over how many days do you want the event repeated? e.g. 365 days (1 year)
+        date_start (optional) : when do you want the event to start repeating? By default it is
+            going to be the date when this function is executed. Note that if the day is not 
+            one of the day specified in repeat_day_of_week, the next closest date meeting the 
+            criterial is when the event going to start. 
+        """
 
-abc = eventCreator(1,2,3,4,5,6,7,8)
+    datetime_begin = datetime.datetime.combine(date_start,time_begin)
+    datetime_end = datetime_begin + duration
+    
+    for days in range(effective_days):
+        datetime_begin = datetime_begin + datetime.timedelta(days = 1)
+        datetime_end = datetime_end + datetime.timedelta(days = 1)
+        
+        #check if right weekday
+        if not datetime_begin.weekday() in repeat_on_day_of_week:
+            continue
+        
+        start_string = time2str(datetime_begin)
+        end_string = time2str(datetime_end)
+        
+        event['start']['dateTime'] = start_string
+        event['end']['dateTime'] = end_string
+        service.events().insert(calendarId = "primary",body = event).execute()
+        
+def freeTimeChecker(service,check_ndays = 14,start_datetime = datetime.datetime.now() ,min_free_len_mins = 10):
+    """returns a list of free time psuedo-events starting from start_date for 
+    n effective_days
+    
+    service: googleCalendar API connection. See connection.py
+    start_date: datetime.datetime obj
+    effective_days: datetime.timedelta obj
+    check_ndays: how many  days from the start date to check for
+    min_free_len_mins: minumn lenth of free time
+    """
+    calendar_result = service.calendarList().list().execute()
+    calendars = calendar_result.get('items',[])
+    all_events = []
+    for calendar in calendars:
+        cal_id = calendar['id']
+        events = getEvents(service,cal_id,start_datetime,check_ndays)
+        all_events = all_events + events
+    
+    #now we remove all day events
+    for event in all_events:
+        if not event['start'].get('dateTime',0):
+            all_events.remove(event)
+    #now we sort all events by their start time
+    all_events = sorted(all_events, key = lambda t: t['start'].get('dateTime'))
+    
+    #we set the first end time to be start_time
+    end_datetime = start_datetime
+    #create a list holder of free_time events
+    free_times = []
+    for event in all_events:
+        start_string = event['start']['dateTime']
+        start_datetime = str2time(start_string)
+        
+        duration_timedelta = start_datetime - end_datetime #we calculate duration by using the start time of the second event minus the end time of the first event
+        duration = divmod(duration_timedelta.total_seconds(),60)
+        duration = duration[0]
+        if duration < min_free_len_mins:
+            # if duration is too short, update end_datetime and proceed to the next loop
+            end_datetime = str2time(event['end']['dateTime'])
+            continue
+        else:
+            #if duration is good, create free time event
+           free_time = eventCreator(start_datetime,end_datetime,5,0,'free event',0,0,0,0)
+           free_times.append(free_time)
+       
+    return free_times
+        
+def getEvents(service,calId,start_datetime,search_for_ndays):
+    end_datetime = start_datetime + datetime.timedelta(days = search_for_ndays)
+    
+    start_datetime = utcFormat(start_datetime)
+    end_datetime = utcFormat(end_datetime)
+    events_result = service.events().list(calendarId= calId,
+                                        timeMin=start_datetime,
+                                        maxResults= 1000, singleEvents=True,
+                                        timeMax= end_datetime,
+                                        orderBy='startTime').execute()
+    events = events_result.get('items', [])
+    return events
+
+def utcFormat(DST_datetime):
+    local = pytz.timezone ("America/Toronto")
+    local_dt = local.localize(DST_datetime, is_dst=True)
+    utc_dt = local_dt.astimezone(pytz.utc)
+    utc_dt = utc_dt.isoformat()
+    utc_dt = utc_dt[0:len(utc_dt)-6] + 'Z'
+    return utc_dt
+    
+    
+    
+
                        
 
 

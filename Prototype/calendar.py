@@ -85,7 +85,7 @@ def AllocateSleep():
     service = connection.googleCalendar(SCOPES)
     today = datetime.date.today()
     time_begin = datetime.time(23,30,0)
-    duration = datetime.timedelta(hours = 8.5)
+    duration = datetime.timedelta(hours = 8.0)
     datetime_begin = datetime.datetime.combine(today,time_begin)
     datetime_end = datetime_begin + duration
     for days in range(5):
@@ -94,10 +94,16 @@ def AllocateSleep():
         start_string = calhelp.time2str(datetime_begin)
         end_string = calhelp.time2str(datetime_end)
         
+        print(start_string)
         sleep_event = calhelp.eventCreator(start_string,end_string,0,-1,"Health",5,5,"Sleep",-2)
         service.events().insert(calendarId = "primary",body = sleep_event).execute()
         
         print('Event Created')
         
+def check_free_time():
+    service = connection.googleCalendar(SCOPES)
+    free_times = calhelp.freeTimeChecker(service)
+    return free_times
 if __name__ == '__main__':
-    AllocateSleep()
+    #AllocateSleep()
+    abc = check_free_time()
