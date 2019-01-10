@@ -103,7 +103,10 @@ def AllocateSleep():
 def check_free_time():
     service = connection.googleCalendar(SCOPES)
     free_times = calhelp.freeTimeChecker(service)
-    return free_times
+    for free_time in free_times:
+        start = free_time['start']['dateTime']
+        duration = free_time['duration']
+        print('Free time: ' + str(duration) + 'mins ' + str(start))
 if __name__ == '__main__':
     #AllocateSleep()
-    abc = check_free_time()
+    check_free_time()

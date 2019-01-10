@@ -80,8 +80,9 @@ def eventCreator(start, end, reschedulability,
                        "&importance:" + str(importance) )
     
     event['description'] = description_info
-    event_duration_timedelta = str2time(start) - str2time(end)
+    event_duration_timedelta = str2time(end) - str2time(start)
     event_duration = divmod(event_duration_timedelta.total_seconds(),60)
+    event_duration = event_duration[0]
     event['duration'] = event_duration
     
     return event
@@ -162,15 +163,20 @@ def freeTimeChecker(service,check_ndays = 14,start_datetime = datetime.datetime.
         duration_timedelta = start_datetime - end_datetime #we calculate duration by using the start time of the second event minus the end time of the first event
         duration = divmod(duration_timedelta.total_seconds(),60)
         duration = duration[0]
+        
         if duration < min_free_len_mins:
-            # if duration is too short, update end_datetime and proceed to the next loop
+            # if duration is too short skip
             end_datetime = str2time(event['end']['dateTime'])
             continue
         else:
             #if duration is good, create free time event
-           free_time = eventCreator(start_datetime,end_datetime,5,0,'free event',0,0,0,0)
+           
+           free_time = eventCreator(end_datetime,start_datetime,5,0,'free event',0,0,0,0) #not the start_datetime field is actually filled by the end_datetime vairable, and vice versa
            free_times.append(free_time)
-       
+        #update end_datetime for next loop
+        end_datetime = str2time(event['end']['dateTime'])
+        
+        
     return free_times
         
 def getEvents(service,calId,start_datetime,search_for_ndays):
