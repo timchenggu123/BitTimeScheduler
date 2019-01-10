@@ -178,6 +178,18 @@ def freeTimeChecker(service,check_ndays = 14,start_datetime = datetime.datetime.
         
         
     return free_times
+
+def getCalendarId(service,calendar_summary):
+    '''returns a calendar_Id from a calendar_summary. Always returns the 
+    first one found. If none found, return -1'''
+    
+    calendar_result = service.calendarList().list().execute()
+    calendars = calendar_result.get('items',[])
+    for calendar in calendars:
+        if calendar['summary'] == calendar_summary:
+            return calendar['id']
+        
+    return -1
         
 def getEvents(service,calId,start_datetime,search_for_ndays):
     end_datetime = start_datetime + datetime.timedelta(days = search_for_ndays)
@@ -199,7 +211,39 @@ def utcFormat(DST_datetime):
     utc_dt = utc_dt.isoformat()
     utc_dt = utc_dt[0:len(utc_dt)-6] + 'Z'
     return utc_dt
+
+def getCustomTags(event):
+    string = event['description']
     
+    keys = []
+    keys1 = []
+    key = -1
+    key1 = -1
+    while  True:
+        key = string.find('&',key+1)
+        if key == -1:
+            break
+        keys.append(key)
+        key1 = string.find(':',key1+1)
+        keys1.append(key1)
+
+    custom_tags = {}
+    for i in range(len(keys)):
+
+        key = keys[i]
+        key1 = keys1[i]
+        custom_field = string[(key+1):key1]
+        print(key)
+        print(key1)
+        print(custom_field)
+        try:
+            custom_value = string[(key1+1):keys[i+1]]
+        except:
+            custom_value = string[(key1+1):len(string)]
+        
+        custom_tags[custom_field] = custom_value
+        
+    return custom_tags
     
     
 

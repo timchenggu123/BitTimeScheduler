@@ -88,6 +88,17 @@ def AllocateSleep():
     duration = datetime.timedelta(hours = 8.0)
     datetime_begin = datetime.datetime.combine(today,time_begin)
     datetime_end = datetime_begin + duration
+    
+    start_string = calhelp.time2str(datetime_begin)
+    end_string = calhelp.time2str(datetime_end)
+    
+    print(start_string)
+    sleep_event = calhelp.eventCreator(start_string,end_string,0,-1,"Health",5,5,"Sleep",-2)
+    service.events().insert(calendarId = "js0f8k7soj3kvrjc8qtfh43874@group.calendar.google.com",
+                  body = sleep_event).execute()
+    
+    print('Event Created')
+        
     for days in range(5):
         datetime_begin = datetime_begin + datetime.timedelta(days = 1)
         datetime_end = datetime_end + datetime.timedelta(days = 1)
@@ -96,17 +107,35 @@ def AllocateSleep():
         
         print(start_string)
         sleep_event = calhelp.eventCreator(start_string,end_string,0,-1,"Health",5,5,"Sleep",-2)
-        service.events().insert(calendarId = "primary",body = sleep_event).execute()
+        service.events().insert(calendarId = "js0f8k7soj3kvrjc8qtfh43874@group.calendar.google.com",
+                      body = sleep_event).execute()
         
         print('Event Created')
+
+def allocateFood():
+    service = connection.googleCalendar(SCOPES)
+    #allcoate breakfast
+    brkfst_duration = 30
+    #after sleep
+    cal_Health_Id = calhelp.getCalendarId(service,'Health')
+    health_events = calhelp.getEvents(service, cal_Health_Id, datetime.datetime.now(), 14)
+    for health_event in health_events:
+        if health_event['summary'] == 'Sleep':
+            brkfst_start = calhelp.str2time(health_event['end']['dateTime'])
+            brkfst_end = brkfst_start + datetime.timedelta(minutes = brkfst_duration)
+            brkfst_event = calhelp.eventCreator(brkfst_start,brkfst_end,0,0,'Health',5,5,'BreakFast')
+            service.events().insert(calendarId = cal_Health_Id, body = brkfst_event).execute()
+            print('break fast allocated')
         
 def check_free_time():
     service = connection.googleCalendar(SCOPES)
-    free_times = calhelp.freeTimeChecker(service)
+    free_times = calhelp.freeTimeChecker(service,min_free_len_mins = 11)
     for free_time in free_times:
         start = free_time['start']['dateTime']
         duration = free_time['duration']
         print('Free time: ' + str(duration) + 'mins ' + str(start))
+        
 if __name__ == '__main__':
     #AllocateSleep()
-    check_free_time()
+    allocateFood()
+    #check_free_time()
