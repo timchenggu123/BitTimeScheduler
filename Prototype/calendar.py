@@ -80,7 +80,24 @@ def freetimeevent():
                 }
         
         service.events().insert(calendarId = "primary",body = new_event).execute()
+
+def AllocateSleep():
+    service = connection.googleCalendar(SCOPES)
+    today = datetime.date.today()
+    time_begin = datetime.time(23,30,0)
+    duration = datetime.timedelta(hours = 8.5)
+    datetime_begin = datetime.datetime.combine(today,time_begin)
+    datetime_end = datetime_begin + duration
+    for days in range(5):
+        datetime_begin = datetime_begin + datetime.timedelta(days = 1)
+        datetime_end = datetime_end + datetime.timedelta(days = 1)
+        start_string = calhelp.time2str(datetime_begin)
+        end_string = calhelp.time2str(datetime_end)
         
+        sleep_event = calhelp.eventCreator(start_string,end_string,0,-1,"Health",5,5,"Sleep",-2)
+        service.events().insert(calendarId = "primary",body = sleep_event).execute()
+        
+        print('Event Created')
         
 if __name__ == '__main__':
-    freetimeevent()
+    AllocateSleep()

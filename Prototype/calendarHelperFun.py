@@ -56,13 +56,13 @@ def getEventStartEnd(event):
 
 def eventCreator(start_string, end_string, reschedulability, 
                  expirary_date, event_type, urgency,
-                 importance, custom_name = -1)
+                 importance, custom_name = -1, extensibility = 0):
     if custom_name == -1:
         custom_name = event_type
     event = {
             "start":{"dateTime":start_string},
             "end":{"dateTime":end_string},
-            "summary": event_type,
+            "summary": custom_name,
             }
     
     description_info = ("&reschedulability:" + str(reschedulability) +
@@ -70,7 +70,12 @@ def eventCreator(start_string, end_string, reschedulability,
                        "&event_type:" + str(event_type) +
                        "&urgency:" + str(urgency) +
                        "&importance:" + str(importance) )
+    event['description'] = description_info
     
+    return event
+
+
+abc = eventCreator(1,2,3,4,5,6,7,8)
                        
 
 
