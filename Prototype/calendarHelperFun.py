@@ -73,12 +73,17 @@ def eventCreator(start, end, reschedulability,
             "summary": custom_name,
             }
     
+    days_till_expire = expirary_date - str2time(start)
+    days_till_expire = divmod(days_till_expire.total_seconds(),86400)[0]
+    
     description_info = ("&reschedulability:" + str(reschedulability) +
                        "&expirary_date:" + str(expirary_date) +
+                       "&days_till_expire" + str(days_till_expire) +
                        "&event_type:" + str(event_type) +
                        "&urgency:" + str(urgency) +
-                       "&importance:" + str(importance) )
-    
+                       "&importance:" + str(importance) +
+                       "&extensibility:" + str(extensibility))
+                        
     event['description'] = description_info
     event_duration_timedelta = str2time(end) - str2time(start)
     event_duration = divmod(event_duration_timedelta.total_seconds(),60)
@@ -86,6 +91,7 @@ def eventCreator(start, end, reschedulability,
     event['duration'] = event_duration
     
     return event
+
 
 def daily_insert(service,event,time_begin,duration,
                  effective_days,date_start = datetime.datetime.today(),
@@ -204,6 +210,34 @@ def getEvents(service,calId,start_datetime,search_for_ndays):
     events = events_result.get('items', [])
     return events
 
+def getEventDuration(event):
+    start = event['start'].get('dateTime')
+    end = event['end'].get('dateTime')
+    event_duration_timedelta = str2time(end) - str2time(start)
+    event_duration = divmod(event_duration_timedelta.total_seconds(),60)
+    event_duration = event_duration[0]
+    
+    return event_duration
+    
+    
+def getAllEvents(service,start_datetime,search_for_ndays):
+    calendar_result = service.calendarList().list().execute()
+    calendars = calendar_result.get('items',[])
+    all_events = []
+    for calendar in calendars:
+        cal_id = calendar['id']
+        events = getEvents(service,cal_id,start_datetime,search_for_ndays)
+        all_events = all_events + events
+        #now we remove all day events
+    for event in all_events:
+        if not event['start'].get('dateTime',0):
+            all_events.remove(event)
+            
+    #now we sort all events by their start time
+    all_events = sorted(all_events, key = lambda t: t['start'].get('dateTime'))
+    
+    return all_events
+
 def utcFormat(DST_datetime):
     local = pytz.timezone ("America/Toronto")
     local_dt = local.localize(DST_datetime, is_dst=True)
@@ -245,8 +279,12 @@ def getCustomTags(event):
         
     return custom_tags
     
+def updateEvent(service,event):
+    updated_event = service.events().update(calendarId='primary', eventId=event['id'], body=event).execute()
+    print (updated_event['updated'])
     
-
+def dropEvent(service,event):
+    dropping_event = service.events().delete(calendarId = 'primary',eventId = event['id']).execute()
                        
 
 
