@@ -7,18 +7,48 @@ class scheduler():
     def __init__(self):
         self.SCOPES = 'https://www.googleapis.com/auth/calendar'
         self.service = connection.googleCalendar(self.SCOPES)
+        self.bucket_list = list()
+        
+    def addBucketList(self,event,calendar_id):
+        event['cal_id'] = calendar_id
+        self.bucket_list.append(event)
+        
+    def showBucketList(self):
+        if self.bucket_list:
+            for event in self.bucket_list:
+                print(event['start']['dateTime'] + ' ' + event['summary'])
+    
+    def scheduleBucketList(self):
+        if self.bucket_list:
+            for event in self.bucket_list:
+                print('scheduling ' + event['summary'] + '.....')
+                start_datetime = calhelp.str2time(event['start']['dateTime'])
+                custom_tags = calhelp.getCustomTags(event)
+                days_till_expire = custom_tags['days_till_expire']
+                success = self.rescheduler(event,start_datetime,days_till_expire)
+                if success:
+                    print(event['summary'] + ' scheduled successfully')
+                else:
+                    print(event['summary'] + ' cannot be scheduled')
+        else:
+            print('bucket list is empty !')
         
     def rescheduler(self,target_event,start_datetime,for_ndays):
         '''needs work'''
-        all_events = calhelp.getAllEvents(self.service,start_date,for_ndays) #
+        cal_presets = self.getCalPresets()
+        all_events = calhelp.getAllEvents(self.service,start_datetime,for_ndays, cal_presets) #
+        free_time = calhelp.getFreeTime(self.service,start_datetime,for_ndays)
+        
+        all_events = all_events + free_time
+        all_events = sorted(all_events,key = lambda s: s['start']['dateTime'])
         
         reschedulability = -1
         filtered_events = self.reschedulabilityFilter(all_events,reschedulability)
         
         target_event_duration = calhelp.getEventDuration(target_event)
-        filtered_events = self.timeFitFilter(self,filtered_events,target_event_duration)
+        filtered_events = self.timeFitFilter(filtered_events,target_event_duration)
         
-        if len(filtered_events) >= 0
+        if len(filtered_events) >= 0:
             ranked_events = self.ranker(filtered_events,target_event)
             
             if self.rankingVerifier(ranked_events):
@@ -27,7 +57,7 @@ class scheduler():
                 new_end = to_be_updated['end']['dateTime']
                 target_event['start']['dateTime'] = new_start
                 target_event['end']['dateTime'] = new_end
-                calhelp.updateEvent(self.service,target_Event)
+                calhelp.updateEvent(self.service,target_event)
                 
                 return 1
                 
@@ -35,18 +65,20 @@ class scheduler():
         filtered_events = self.reschedulabilityFilter(all_events,reschedulability)
         
         target_event_duration = calhelp.getEventDuration(target_event)
-        filtered_events = self.timeFitFilter(self,filtered_events,target_event_duration)
+        filtered_events = self.timeFitFilter(filtered_events,target_event_duration)
         
-        if len(filtered_events) >= 0
+        if len(filtered_events) >= 0:
             ranked_events = self.ranker(filtered_events,target_event)
             
             if self.rankingVerifier(ranked_events):
                 new_target_event = ranked_events[0]
                 new_start_datetime = calhelp.str2time(new_target_event['end']['dateTime'])
-                new_custom_tags = calhelp.getCustomTags(new_target_event)
-                new_days_till_expire = new_custom_tags['days_till_expire']
+
+                days_lapsed = new_start_datetime.date() - start_datetime.date()
+                days_lapsed = days_lapsed.day
+                new_for_ndays = for_ndays - days_lapsed
                 
-                success = self.rescheduler(new_target_event,new_start_datetime,new_days_till_expire)
+                success = self.rescheduler(new_target_event,new_start_datetime,new_for_ndays)
                 
                 if success:
                     to_be_updated = ranked_events[0]
@@ -54,7 +86,7 @@ class scheduler():
                     new_end = to_be_updated['end']['dateTime']
                     target_event['start']['dateTime'] = new_start
                     target_event['end']['dateTime'] = new_end
-                    calhelp.updateEvent(self.service,target_Event)
+                    calhelp.updateEvent(self.service,target_event)
                 
                     return 1
                     
@@ -68,37 +100,48 @@ class scheduler():
         filtered_events = self.reschedulabilityFilter(all_events,reschedulability)
         
         target_event_duration = calhelp.getEventDuration(target_event)
-        filtered_events = self.timeFitFilter(self,filtered_events,target_event_duration)
+        filtered_events = self.timeFitFilter(filtered_events,target_event_duration)
         
         ranked_events = self.ranker(filtered_events,target_event)
         
-        if len(filtered_events) >= 0
+        if len(filtered_events) >= 0:
             ranked_events = self.ranker(filtered_events,target_event)
             
             if self.rankingVerifier(ranked_events,min_IU_score = 2):
                 dropping_event = ranked_events[0]
-                new_start_datetime = calhelp.str2time(new_target_event['end']['dateTime'])
-                new_custom_tags = calhelp.getCustomTags(new_target_event)
-                new_days_till_expire = new_custom_tags['days_till_expire']
+
+                calhelp.dropEvent(self.service,dropping_event)
+
+                new_start = dropping_event['start']['dateTime']
+                new_end = dropping_event['end']['dateTime']
+                target_event['start']['dateTime'] = new_start
+                target_event['end']['dateTime'] = new_end
+                calhelp.updateEvent(self.service,target_event)
                 
-                success = self.rescheduler(new_target_event,new_start_datetime,new_days_till_expire)
-                
-                if success:
-                    to_be_updated = ranked_events[0]
-                    new_start = to_be_updated['start']['dateTime']
-                    new_end = to_be_updated['end']['dateTime']
-                    target_event['start']['dateTime'] = new_start
-                    target_event['end']['dateTime'] = new_end
-                    calhelp.updateEvent(self.service,target_Event)
-                
-                    return 1
+                return 1
             
         print('failed to schedule event')
         return 0
             
+    def getCalPresets(self):
+        '''this is but a temporary solution. Idealistically this function is 
+        supposed to retrieve preset information from json files'''
+        presets = list()
+        preset = {'cal_id' : 't4p9h18kn9ka3nf8sf6teobfbfouoo6t@import.calendar.google.com',
+                  'description':("&reschedulability:" + str(0) +
+                       "&expirary_date:" + str(-999) +
+                       "&days_till_expire:" + str(0) +
+                       "&event_type:" + 'School' +
+                       "&urgency:" + str(5) +
+                       "&importance:" + str(5) +
+                       "&extensibility:" + str(0))
+                  }
+        presets.append(preset)
+
+        return presets
     def rankingVerifier(self,ranked_events,min_IU_score = 0):
 
-        if ranked_events[0]['IUScore'] <= min_IU_Score:
+        if len(ranked_events) == 0 or ranked_events[0]['IUScore'] <= min_IU_score:
             return False
         
         return True
@@ -106,12 +149,13 @@ class scheduler():
     def extensibilityFilter(self,all_events,extensibility):
         for event in all_events :
             custom_tag = calhelp.getCustomTags(event)
-            if custom_tag['extensibility'] < 0 and cutom_tag['extensibility'] < extensibility :
+            if custom_tag['extensibility'] < 0 and custom_tag['extensibility'] < extensibility :
                 all_events.remove(event)
         
         return all_events
     
     def reschedulabilityFilter(self,all_events,reschedulability):
+        reschedulability = str(reschedulability)
         for event in all_events:
             custom_tag = calhelp.getCustomTags(event)
             if not custom_tag['reschedulability'] == reschedulability:
@@ -136,7 +180,7 @@ class scheduler():
             event_total_score = event['time_fit_score'] + event['IUScore']
             event['score'] = event_total_score
             
-        events = sorted(events,key = lambda s: s['score'])
+        events = sorted(events,key = lambda s: s['score'], reverse = True)
         
         return events
         
@@ -149,7 +193,7 @@ class scheduler():
             
         return events
             
-    def timeFitScoreCalculator(event_duration,duration,small_enough = 10,weight = 2):
+    def timeFitScoreCalculator(self,event_duration,duration,small_enough = 10,weight = 2):
         duration_difference = event_duration - duration
         
         if duration_difference == 0:
@@ -180,11 +224,20 @@ class scheduler():
             event_importance = event_custom_tags['importance']
             event_urgency = event_custom_tags['urgency']
             
-            event_IUScore = importance+urgency - (event_importance + event_urgency)
+            event_IUScore = int(importance) + int(urgency) - (int(event_importance) + int(event_urgency))
             
             event['IUScore'] = event_IUScore
             
         return events
-            
+
+#test
+sch = scheduler()
+start = datetime.datetime.now() + datetime.timedelta(minutes = 60)
+end = datetime.datetime.now() + datetime.timedelta(minutes = 120)
+event1 = calhelp.eventCreator(start,end,0,0,'Health',5,5,'test',0,3)
+calid = calhelp.getCalendarId(sch.service,'Health')
+sch.addBucketList(event1,calid)
+sch.showBucketList()
+sch.scheduleBucketList()
             
     

@@ -56,7 +56,7 @@ def getEventStartEnd(event):
 
 def eventCreator(start, end, reschedulability, 
                  expirary_date, event_type, urgency,
-                 importance, custom_name = -1, extensibility = 0):
+                 importance, custom_name = -1, extensibility = 0, days_till_expire = 0):
 
     if custom_name == -1:
         custom_name = event_type
@@ -73,12 +73,13 @@ def eventCreator(start, end, reschedulability,
             "summary": custom_name,
             }
     
-    days_till_expire = expirary_date - str2time(start)
-    days_till_expire = divmod(days_till_expire.total_seconds(),86400)[0]
-    
+    if expirary_date:
+        days_till_expire = expirary_date - str2time(start)
+        days_till_expire = divmod(days_till_expire.total_seconds(),86400)[0]
+        
     description_info = ("&reschedulability:" + str(reschedulability) +
                        "&expirary_date:" + str(expirary_date) +
-                       "&days_till_expire" + str(days_till_expire) +
+                       "&days_till_expire:" + str(days_till_expire) +
                        "&event_type:" + str(event_type) +
                        "&urgency:" + str(urgency) +
                        "&importance:" + str(importance) +
@@ -92,7 +93,40 @@ def eventCreator(start, end, reschedulability,
     
     return event
 
+def initCustomTags(event, custom_tags = {}):
+    empty_tags = {"reschedulability": -999,
+                   "expirary_date" :-999,
+                   "days_till_expire":-999,
+                   "event_type:":-999,
+                   "urgency:":-999,
+                   "importance:":-999,
+                   "extensibility:":-999}
+    if custom_tags:
+        for custom_tag in custom_tags:
+            custom_value = custom_tags[custom_tag]
+            empty_tags[custom_tag] = custom_value
+            
+    description_info = ''
+    for custom_tag in custom_tags:
+        custom_string = '&' + custom_tag +':'+str(custom_tags[custom_tag])
+        description_info += custom_string
+    
+    event['description'] = description_info
+    return event
+    
+def changeCustomTags(event,custom_tags):
+    event_custom_tags = getCustomTags(event)
+    
+    for custom_tag in custom_tags:
+        event_custom_tags[custom_tag] = custom_tags[custom_tag]
+        
+    description_info = ''
+    for custom_tag in event_custom_tags:
+        custom_string = '&' + custom_tag +':'+str(event_custom_tags[custom_tag])
+        description_info += custom_string
 
+    event['description'] = description_info
+    
 def daily_insert(service,event,time_begin,duration,
                  effective_days,date_start = datetime.datetime.today(),
                  repeat_on_day_of_week = {0,1,2,3,4,5,6}):
@@ -133,7 +167,7 @@ def daily_insert(service,event,time_begin,duration,
         event['end']['dateTime'] = end_string
         service.events().insert(calendarId = "primary",body = event).execute()
         
-def freeTimeChecker(service,check_ndays = 14,start_datetime = datetime.datetime.now() ,min_free_len_mins = 10):
+def getFreeTime(service,start_datetime = datetime.datetime.now(),check_ndays = 14,min_free_len_mins = 10):
     """returns a list of free time psuedo-events starting from start_date for 
     n effective_days
     
@@ -141,7 +175,7 @@ def freeTimeChecker(service,check_ndays = 14,start_datetime = datetime.datetime.
     start_date: datetime.datetime obj
     effective_days: datetime.timedelta obj
     check_ndays: how many  days from the start date to check for
-    min_free_len_mins: minumn lenth of free time
+    min_free_len_mins: minumn lenth of free time. Any free time shorter will be ignored
     """
     calendar_result = service.calendarList().list().execute()
     calendars = calendar_result.get('items',[])
@@ -177,7 +211,7 @@ def freeTimeChecker(service,check_ndays = 14,start_datetime = datetime.datetime.
         else:
             #if duration is good, create free time event
            
-           free_time = eventCreator(end_datetime,start_datetime,5,0,'free event',0,0,0,0) #not the start_datetime field is actually filled by the end_datetime vairable, and vice versa
+           free_time = eventCreator(end_datetime,start_datetime,-1,0,'free event',0,0,'Free Time',0) #not the start_datetime field is actually filled by the end_datetime vairable, and vice versa
            free_times.append(free_time)
         #update end_datetime for next loop
         end_datetime = str2time(event['end']['dateTime'])
@@ -198,7 +232,7 @@ def getCalendarId(service,calendar_summary):
     return -1
         
 def getEvents(service,calId,start_datetime,search_for_ndays):
-    end_datetime = start_datetime + datetime.timedelta(days = search_for_ndays)
+    end_datetime = start_datetime + datetime.timedelta(days = int(search_for_ndays) + 1) #+1 here because timeMax is exclusive
     
     start_datetime = utcFormat(start_datetime)
     end_datetime = utcFormat(end_datetime)
@@ -215,18 +249,43 @@ def getEventDuration(event):
     end = event['end'].get('dateTime')
     event_duration_timedelta = str2time(end) - str2time(start)
     event_duration = divmod(event_duration_timedelta.total_seconds(),60)
-    event_duration = event_duration[0]
+    event_duration = round(event_duration[0])
     
     return event_duration
     
     
-def getAllEvents(service,start_datetime,search_for_ndays):
+def getAllEvents(service,start_datetime,search_for_ndays,cal_presets = {}):
     calendar_result = service.calendarList().list().execute()
     calendars = calendar_result.get('items',[])
     all_events = []
     for calendar in calendars:
         cal_id = calendar['id']
         events = getEvents(service,cal_id,start_datetime,search_for_ndays)
+        
+        for event in events:
+            event['cal_id'] = cal_id
+            if 'description' in event:
+                if not event['description'] and cal_presets:
+                    for cal_preset in cal_presets:
+                        if cal_preset['cal_id'] == cal_id:
+                            event['description'] = cal_preset['description']
+                            
+                    if not event['description']:
+                        raise ValueError('Calendar preset description info missing for ' + cal_id)
+                        
+                elif not event['description']: #in the case when there no description and cal_preset is empty...
+                    raise ValueError('Calendar preset description info missing for ' + cal_id)
+            elif len(cal_presets) > 0:
+                for cal_preset in cal_presets:
+                    if cal_preset['cal_id'] == cal_id:
+                        event['description'] = cal_preset['description']
+                
+                if not event['description']:
+                    raise ValueError('Calendar preset description info missing for ' + cal_id)
+                    
+            else:
+                raise ValueError('Calendar preset description info missing for ' + cal_id)
+                    
         all_events = all_events + events
         #now we remove all day events
     for event in all_events:
@@ -267,9 +326,6 @@ def getCustomTags(event):
         key = keys[i]
         key1 = keys1[i]
         custom_field = string[(key+1):key1]
-        print(key)
-        print(key1)
-        print(custom_field)
         try:
             custom_value = string[(key1+1):keys[i+1]]
         except:
@@ -280,12 +336,22 @@ def getCustomTags(event):
     return custom_tags
     
 def updateEvent(service,event):
-    updated_event = service.events().update(calendarId='primary', eventId=event['id'], body=event).execute()
-    print (updated_event['updated'])
-    
+    if 'id' in event:
+        updated_event = service.events().update(calendarId=event['cal_id'], eventId=event['id'], body=event).execute()
+        print (updated_event['updated'])
+    else:
+        insertEvent(service,event)
+        
 def dropEvent(service,event):
-    dropping_event = service.events().delete(calendarId = 'primary',eventId = event['id']).execute()
-                       
+    to_be_dropped = service.events().delete(calendarId = event['cal_id'],eventId = event['id']).execute()
+    print('Event ' + to_be_dropped['summary'] + 'is dropped')
+    
+def insertEvent(service,event):
+    to_be_inserted = service.events().insert(calendarId = event['cal_id'],body = event).execute()
+    print('Event' + to_be_inserted['summary'] + ' has been created')
+    
+
+    
 
 
 
