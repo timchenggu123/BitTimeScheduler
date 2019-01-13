@@ -292,13 +292,14 @@ class scheduler():
         return events
 
 #test
-sch = scheduler()
-start = datetime.datetime.now() + datetime.timedelta(minutes = 60)
-end = datetime.datetime.now() + datetime.timedelta(minutes = 120)
-event1 = calhelp.eventCreator(start,end,0,0,'Health',0,5,'test',0,15)
-calid = calhelp.getCalendarId(sch.service,'Health')
-sch.addBucketList(event1,calid)
-sch.showBucketList()
-sch.scheduleBucketList()
-            
+if __name__ == '__main__':
+    sch = scheduler()
+    start = datetime.datetime.now() + datetime.timedelta(minutes = 60)
+    end = datetime.datetime.now() + datetime.timedelta(minutes = 120)
+    event1 = calhelp.eventCreator(start,end,0,0,'Health',0,5,'test',0,15)
+    calid = calhelp.getCalendarId(sch.service,'Health')
+    sch.addBucketList(event1,calid)
+    sch.showBucketList()
+    sch.scheduleBucketList()
+                
     

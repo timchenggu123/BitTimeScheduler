@@ -56,7 +56,8 @@ def getEventStartEnd(event):
 
 def eventCreator(start, end, reschedulability, 
                  expirary_date, event_type, urgency,
-                 importance, custom_name = -1, extensibility = 0, days_till_expire = 0):
+                 importance, custom_name = -1, extensibility = 0, days_till_expire = 0,
+                 time_zone = 'America/Toronto'):
 
     if custom_name == -1:
         custom_name = event_type
@@ -68,8 +69,10 @@ def eventCreator(start, end, reschedulability,
         end = time2str(end)
         
     event = {
-            "start":{"dateTime":start},
-            "end":{"dateTime":end},
+            "start":{"dateTime":start,
+                     "timeZone":time_zone},
+            "end":{"dateTime":end,
+                   "timeZone":time_zone},
             "summary": custom_name,
             }
     
@@ -395,9 +398,19 @@ def insertEvent(service,event):
     to_be_inserted = service.events().insert(calendarId = event['cal_id'],body = event).execute()
     print('Event ' + to_be_inserted['summary'] + ' has been created. link: %s' % (to_be_inserted.get('htmlLink')))
     
-def createRecurringEvent(event):
+def createRecurringEvent(event,by_day ='MO,TU,WE,TH,FR,SA,SU',until = 0):
+    '''until needs to be a string in the formta "YYYYMMDD" '''
     '''needs more work'''
-    event['recurrence'] = 'RRULE:FREQ=DAILY;UNTIL=2019-04-30'
+    event['recurrence'] = list()
+    
+    if until:
+        until_statement = 'UNTIL=' + until + ';'
+    else:
+        until_statement = ''
+        
+    event['recurrence'].append( 'RRULE:FREQ=WEEKLY;'+ until_statement+'BYDAY=' + by_day)
+    return event
+    
 
 
     
