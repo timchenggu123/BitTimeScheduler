@@ -57,7 +57,7 @@ def getEventStartEnd(event):
 def eventCreator(start, end, reschedulability, 
                  expirary_date, event_type, urgency,
                  importance, custom_name = -1, extensibility = 0, days_till_expire = 0,
-                 time_zone = 'America/Toronto'):
+                 time_zone = 'America/Toronto',cal_id = 'primary'):
 
     if custom_name == -1:
         custom_name = event_type
@@ -101,22 +101,36 @@ def eventCreator(start, end, reschedulability,
     event_duration = divmod(event_duration_timedelta.total_seconds(),60)
     event_duration = event_duration[0]
     event['duration'] = event_duration
+    event['cal_id'] = cal_id
     
     return event
 
-def initCustomTags(event, custom_tags = {}):
-    empty_tags = {"reschedulability": -999,
-                   "expirary_date" :-999,
-                   "days_till_expire":-999,
-                   "event_type:":-999,
-                   "urgency:":-999,
-                   "importance:":-999,
-                   "extensibility:":-999}
-    if custom_tags:
-        for custom_tag in custom_tags:
-            custom_value = custom_tags[custom_tag]
-            empty_tags[custom_tag] = custom_value
-            
+def addCustomTags(event, description = '', custom_tags = {}):
+    
+    if description and not custom_tags:
+        custom_tags = getCustomTags(description = description)
+    elif description and custom_tags:
+        raise ValueError('Too many arguments. Please only provid one')
+        
+    expirary_date = custom_tags['expirary_date']
+    days_till_expire = custom_tags['days_till_expire']
+    start = event['start']['dateTime']
+    
+    if type(expirary_date) is datetime.datetime :
+        days_till_expire = expirary_date - str2time(start)
+        days_till_expire = divmod(days_till_expire.total_seconds(),86400)[0]
+        expirary_date = expirary_date.date()
+        
+    elif type(expirary_date) is datetime.date:
+        days_till_expire = expirary_date - str2time(start).date()
+        days_till_expire = days_till_expire.days
+        
+    elif expirary_date == str(-999):
+        expirary_date = str2time(start).date()
+    
+    custom_tags['expirary_date'] = expirary_date
+    custom_tags['days_till_expire'] = days_till_expire
+    
     description_info = ''
     for custom_tag in custom_tags:
         custom_string = '&' + custom_tag +':'+str(custom_tags[custom_tag])
@@ -226,7 +240,7 @@ def getFreeTime(service,start_datetime = datetime.datetime.now(),check_ndays = 1
         else:
             #if duration is good, create free time event
            
-           free_time = eventCreator(end_datetime,start_datetime,-1,0,'free event',0,0,'Free Time',0) #not the start_datetime field is actually filled by the end_datetime vairable, and vice versa
+           free_time = eventCreator(end_datetime,start_datetime,-2,0,'free event',0,0,'Free Time',0) #not the start_datetime field is actually filled by the end_datetime vairable, and vice versa
            free_times.append(free_time)
         #update end_datetime for next loop
         end_datetime = str2time(event['end']['dateTime'])
@@ -293,7 +307,7 @@ def getAllEvents(service,start_datetime,search_for_ndays,cal_presets = {}):
             elif len(cal_presets) > 0:
                 for cal_preset in cal_presets:
                     if cal_preset['cal_id'] == cal_id:
-                        event['description'] = cal_preset['description']                    
+                        addCustomTags(event,cal_preset['description'])                    
             else:
                 raise ValueError('Calendar preset description info missing for ' + cal_id)
                     
@@ -328,8 +342,13 @@ def utcFormat(DST_datetime):
     utc_dt = utc_dt[0:len(utc_dt)-6] + 'Z'
     return utc_dt
 
-def getCustomTags(event):
-    string = event['description']
+def getCustomTags(event = {},description = ''):
+    if event:
+        string = event['description']
+    elif description:
+        string = description
+    else:
+        raise ValueError('not enough arguments')
     
     keys = []
     keys1 = []
@@ -372,7 +391,7 @@ def calcEventExpireDays(event):
         
     else:
         try:
-            expirary_date = str2time(expirary_date)
+            expirary_date = str2time(expirary_date).date()
         except:
             raise ValueError('expirary date format invalid')
 
@@ -391,12 +410,19 @@ def updateEvent(service,event):
         insertEvent(service,event)
         
 def dropEvent(service,event):
+    confirm = input('Event drop proposed. Do you want to drop event ' + event['summary'] + ' on ' + event['start']['dateTime'] + '?')
+    if not confirm:
+        return False
     to_be_dropped = service.events().delete(calendarId = event['cal_id'],eventId = event['id']).execute()
     print('Event ' + to_be_dropped['summary'] + 'is dropped')
     
+    return True
+
 def insertEvent(service,event):
     to_be_inserted = service.events().insert(calendarId = event['cal_id'],body = event).execute()
+    print()
     print('Event ' + to_be_inserted['summary'] + ' has been created. link: %s' % (to_be_inserted.get('htmlLink')))
+    print()
     
 def createRecurringEvent(event,by_day ='MO,TU,WE,TH,FR,SA,SU',until = 0):
     '''until needs to be a string in the formta "YYYYMMDD" '''

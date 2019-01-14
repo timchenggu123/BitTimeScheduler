@@ -2,7 +2,7 @@ import calendarHelperFun as calhelp
 import scheduler
 import datetime
 
-def main():
+def basic_health_event():
     sch = scheduler.scheduler()
     sleep_week_event = calhelp.eventCreator(datetime.datetime(2019,1,13,23,30),
                                        datetime.datetime(2019,1,14,7,30),
@@ -68,7 +68,7 @@ def main():
                                         -999,
                                         'Health',
                                         5,
-                                        5,
+                                        4,
                                         'Dinner',
                                         -120) 
     dinner_event = calhelp.createRecurringEvent(dinner_event,'MO,TU,WE,TH,FR,SA,SU')
@@ -76,6 +76,57 @@ def main():
     
     calhelp.updateEvent(sch.service,dinner_event)
     
+
+def basic_study():
+    sch = scheduler.scheduler()
+    ECE_240 = calhelp.eventCreator(datetime.datetime(2019,1,14,00,00,00),
+                                   datetime.datetime(2019,1,14,2,00,00),
+                                   1,
+                                   datetime.date(2019,1,20),
+                                   'Basic Study',
+                                   5,
+                                   4,
+                                   'ECE 240 <general>'
+                                   )
+    ECE_240['cal_id'] = calhelp.getCalendarId(sch.service,'Study')
+    
+    sch.scheduleDailyEvent(ECE_240)
+    
+    ECE_250 = calhelp.eventCreator(datetime.datetime(2019,1,14,00,00,00),
+                                   datetime.datetime(2019,1,14,1,00,00),
+                                   1,
+                                   datetime.date(2019,1,20),
+                                   'Basic Study',
+                                   5,
+                                   4,
+                                   'ECE 250 <general>'
+                                   )
+    ECE_250['cal_id'] = calhelp.getCalendarId(sch.service,'Study')
+    sch.scheduleDailyEvent(ECE_250)
+    
+    ECE_222 = calhelp.eventCreator(datetime.datetime(2019,1,14,00,00,00),
+                                   datetime.datetime(2019,1,14,1,00,00),
+                                   1,
+                                   datetime.date(2019,1,20),
+                                   'Basic Study',
+                                   5,
+                                   4,
+                                   'ECE 222 <general>'
+                                   )
+    ECE_222['cal_id'] = calhelp.getCalendarId(sch.service,'Study')
+    sch.scheduleDailyEvent(ECE_222)
+
+    ECE_290 = calhelp.eventCreator(datetime.datetime(2019,1,14,00,00,00),
+                                   datetime.datetime(2019,1,14,1,00,00),
+                                   1,
+                                   datetime.date(2019,1,18),
+                                   'Basic Study',
+                                   5,
+                                   4,
+                                   'ECE 290 <general>'
+                                   )
+    ECE_290['cal_id'] = calhelp.getCalendarId(sch.service,'Study')
+    sch.scheduleDailyEvent(ECE_290,by_daily = True, by_daily_interval = 1)
     
 if __name__ == '__main__':
-    main()
+    basic_study()

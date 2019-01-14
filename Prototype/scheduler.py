@@ -33,7 +33,106 @@ class scheduler():
                     print(event['summary'] + ' cannot be scheduled')
         else:
             print('bucket list is empty !')
+            
+    def scheduleDailyEvent(self,event,period_start_date = -1,period_end_date = -1,by_week = False,
+                           by_week_day = 'MO,TU,WE,TH,FR', by_daily = False,
+                           by_daily_interval = 0):
+        #constant definition
+        week_day_dict = {
+                'MO':0,
+                'TU':1,
+                'WE':2,
+                'TH':3,
+                'FR':4,
+                'SA':5,
+                'SU':6
+                }
+        instance_count = 0
         
+        # -- set defualt parameter value
+        if period_start_date == -1:
+            period_start_date = calhelp.str2time(event['start']['dateTime'])
+            period_start_date = period_start_date.date()
+        
+        if period_end_date == -1:
+            custom_tags = calhelp.getCustomTags(event)
+            period_end_date = calhelp.str2time(custom_tags['expirary_date']).date()
+        
+        if not by_week and not by_daily:
+            by_week = True
+            
+        # -- verifying arguments
+        if not type(period_start_date) is datetime.date:
+            raise ValueError('variable period_start_date not a datetime.date object')
+        
+        if not type(period_end_date) is datetime.date:
+            raise ValueError('variable period_end_date not a datetime.date object')
+            
+        if by_week and by_daily:
+            raise ValueError('Please specifiy by_week or by_daily. Only one may be true.')
+            
+            
+        if by_week:
+            if not by_week_day:
+                raise ValueError('by_week_day invalid')
+            else:
+                key1 = 0
+                week_days = list()
+                
+                while True:
+                    key2 = by_week_day.find(',', key1)
+                    if key2 == -1:
+                        week_day = by_week_day[key1:len(by_week_day)]
+                    else:
+                        week_day = by_week_day[key1:key2]
+                        
+                    if week_day in week_day_dict:
+                        week_day = week_day_dict[week_day]
+                    else:
+                        raise ValueError('by_week_day invalid')
+                    week_days.append(week_day)
+                    
+                    if key2 == -1:
+                        break
+                    key1 = key2 +1
+                
+                if not week_days:
+                    raise ValueError('by_week_day invalid')
+                    
+            t_days = period_end_date - period_start_date
+            t_days = t_days.days
+            for i in range(t_days + 1):
+                day = period_start_date + datetime.timedelta(days = i)
+                week_day = day.weekday()
+                if week_day in week_days:
+                    start_datetime = datetime.datetime.combine(day,datetime.time(0,0))
+                    success = self.rescheduler(event,start_datetime,0)
+                    if success:
+                        instance_count += 1
+                    if not success:
+                        print('Unable to schedule on day ' + str(day))
+                    
+        elif by_daily:
+            
+            interval = int(by_daily_interval) + 1
+            t_days = period_end_date - period_start_date
+            t_days = t_days.days
+            ndays = round((t_days - 1)/interval) + 1
+            
+            for i in range(ndays):
+                day = period_start_date + datetime.timedelta(days = i*interval)
+                start_datetime = datetime.datetime.combine(day,datetime.time(0,0))
+                success = self.rescheduler(event,start_datetime,0)
+                if success:
+                    instance_count += 1
+                if not success:
+                    print('Unable to schedule on day' + str(day))
+            
+        print()
+        print('Success! ', instance_count, 'instances of event ', event['summary'],
+              ' scheduled!')
+        
+    
     def rescheduler(self,target_event,start_datetime,for_ndays):
         '''needs work'''
         cal_presets = self.getCalPresets()
@@ -43,6 +142,30 @@ class scheduler():
         all_events = all_events + free_time
         all_events = sorted(all_events,key = lambda s: s['start']['dateTime'])
         
+        reschedulability = -2 # reschedulability level -2 is a unique level exclusive to free time pseudo events
+        print()
+        print('searching at reschedulability level -2: free time')
+        filtered_events = self.reschedulabilityFilter(all_events,reschedulability)
+        
+        target_event_duration = calhelp.getEventDuration(target_event)
+        filtered_events = self.timeFitFilter(filtered_events,target_event_duration)
+        
+        if len(filtered_events) >= 0:
+            ranked_events = self.ranker(filtered_events,target_event)
+            
+            if self.rankingVerifier(ranked_events):
+                to_be_updated = ranked_events[0]
+                new_start = to_be_updated['start']['dateTime']
+                target_event_duration = calhelp.getEventDuration(target_event)
+                new_end = calhelp.str2time(new_start) + datetime.timedelta(minutes = target_event_duration)
+                new_end = calhelp.time2str(new_end)
+                
+                target_event['start']['dateTime'] = new_start
+                target_event['end']['dateTime'] = new_end
+                calhelp.updateEvent(self.service,target_event)
+                
+                return 1
+            
         reschedulability = -1
         print('searching at reschedulability level: -1')
         filtered_events = self.reschedulabilityFilter(all_events,reschedulability)
@@ -107,6 +230,9 @@ class scheduler():
         reschedulability = 0
         filtered_events = self.reschedulabilityFilter(all_events,reschedulability)
         
+        reschedulability = 1 #we are considering both reschedulable and not reschedulable events now
+        filtered_events += self.reschedulabilityFilter(all_events,reschedulability)
+        
         target_event_duration = calhelp.getEventDuration(target_event)
         filtered_events = self.timeFitFilter(filtered_events,target_event_duration)
         
@@ -116,20 +242,25 @@ class scheduler():
             ranked_events = self.ranker(filtered_events,target_event)
             
             if self.rankingVerifier(ranked_events,min_IU_score = 2):
-                dropping_event = ranked_events[0]
+                for dropping_event in ranked_events:
 
-                calhelp.dropEvent(self.service,dropping_event)
-
-                new_start = dropping_event['start']['dateTime']
-                target_event_duration = calhelp.getEventDuration(target_event)
-                new_end = calhelp.str2time(new_start) + datetime.timedelta(minutes = target_event_duration)
-                new_end = calhelp.time2str(new_end)
-                
-                target_event['start']['dateTime'] = new_start
-                target_event['end']['dateTime'] = new_end
-                calhelp.updateEvent(self.service,target_event)
-                
-                return 1
+                    success = calhelp.dropEvent(self.service,dropping_event)
+                    if success:
+                        new_start = dropping_event['start']['dateTime']
+                        target_event_duration = calhelp.getEventDuration(target_event)
+                        new_end = calhelp.str2time(new_start) + datetime.timedelta(minutes = target_event_duration)
+                        new_end = calhelp.time2str(new_end)
+                        
+                        target_event['start']['dateTime'] = new_start
+                        target_event['end']['dateTime'] = new_end
+                        calhelp.updateEvent(self.service,target_event)
+                        
+                        return 1
+                    else:
+                        proceed = input('Do you wish to view the next event on list?')
+                        if not proceed:
+                            break
+                    
             
         print('failed to schedule event')
         return 0
