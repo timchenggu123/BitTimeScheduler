@@ -2,6 +2,7 @@
 A time management application (WIP)
 
 **BitTime Scheduler** is set a set of Google Calendar event management tools written in Python
+
 **BitTime Scheduler** helps schedule events in your busy scheudle by ranking existing events based on the *IU Scale* -- a systems that scores events based on their *importance* and *urgency*.
 
 Features:
