@@ -17,7 +17,20 @@ def basic_health_event():
     sleep_week_event = calhelp.createRecurringEvent(sleep_week_event,'SU,MO,TU,WE,TH')
     sleep_week_event['cal_id'] = calhelp.getCalendarId(sch.service,'Health')
     
-    calhelp.updateEvent(sch.service,sleep_week_event)
+    shower_week_event = calhelp.eventCreator(datetime.datetime(2019,1,13,23,0),
+                                       datetime.datetime(2019,1,13,23,25),
+                                        0,
+                                        -999,
+                                        'Helath',
+                                        5,
+                                        5,
+                                        'Shower',
+                                        -120)
+    
+    shower_week_event = calhelp.createRecurringEvent(shower_week_event,'SU,MO,TU,WE,TH')
+    shower_week_event['cal_id'] = calhelp.getCalendarId(sch.service,'Health')
+    
+    calhelp.updateEvent(sch.service,shower_week_event)
     
     brkfst_week_event = calhelp.eventCreator(datetime.datetime(2019,1,14,7,35),
                                        datetime.datetime(2019,1,14,8,00),
@@ -47,6 +60,21 @@ def basic_health_event():
     sleep_weekend_event['cal_id'] = calhelp.getCalendarId(sch.service,'Health')
     
     calhelp.updateEvent(sch.service,sleep_weekend_event)
+    
+    shower_weekend_event = calhelp.eventCreator(datetime.datetime(2019,1,18,23,0),
+                                       datetime.datetime(2019,1,18,23,25,0),
+                                        0,
+                                        -999,
+                                        'Helath',
+                                        5,
+                                        5,
+                                        'Shower',
+                                        -120)
+    
+    shower_weekend_event = calhelp.createRecurringEvent(shower_weekend_event,'FR,SA')
+    shower_weekend_event['cal_id'] = calhelp.getCalendarId(sch.service,'Health')
+    
+    calhelp.updateEvent(sch.service,shower_weekend_event)
     
     brkfst_weekend_event = calhelp.eventCreator(datetime.datetime(2019,1,19,8,35),
                                        datetime.datetime(2019,1,19,9,00),
@@ -129,4 +157,34 @@ def basic_study():
     sch.scheduleDailyEvent(ECE_290,by_daily = True, by_daily_interval = 1)
     
 if __name__ == '__main__':
-    basic_study()
+    #basic_study()
+    sch = scheduler.scheduler()
+    shower_week_event = calhelp.eventCreator(datetime.datetime(2019,1,13,23,0),
+                                       datetime.datetime(2019,1,13,23,25),
+                                        0,
+                                        -999,
+                                        'Helath',
+                                        5,
+                                        5,
+                                        'Shower',
+                                        -120)
+    
+    shower_week_event = calhelp.createRecurringEvent(shower_week_event,'SU,MO,TU,WE,TH')
+    shower_week_event['cal_id'] = calhelp.getCalendarId(sch.service,'Health')
+    
+    shower_weekend_event = calhelp.eventCreator(datetime.datetime(2019,1,18,23,0),
+                                       datetime.datetime(2019,1,18,23,25,0),
+                                        0,
+                                        -999,
+                                        'Helath',
+                                        5,
+                                        5,
+                                        'Shower',
+                                        -120)
+    
+    shower_weekend_event = calhelp.createRecurringEvent(shower_weekend_event,'FR,SA')
+    shower_weekend_event['cal_id'] = calhelp.getCalendarId(sch.service,'Health')
+    
+    calhelp.updateEvent(sch.service,shower_weekend_event)
+    
+    calhelp.updateEvent(sch.service,shower_week_event)
