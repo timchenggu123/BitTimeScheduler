@@ -10,6 +10,7 @@ class scheduler():
         self.SCOPES = 'https://www.googleapis.com/auth/calendar'
         self.service = connection.googleCalendar(self.SCOPES)
         self.bucket_list = list()
+        self.time_zone = 'America/Toronto'
         
     def addBucketList(self,event,calendar_id):
         event['cal_id'] = calendar_id
@@ -36,7 +37,7 @@ class scheduler():
         else:
             print('bucket list is empty !')
             
-    def scheduleDailyEvent(self,event,period_start_date = -1,period_end_date = -1,by_week = False,
+    def scheduleDailyEvent(self,event_template = {}, event = {},period_start_date = -1,period_end_date = -1,by_week = False,
                            by_week_day = 'MO,TU,WE,TH,FR', by_daily = False,
                            by_daily_interval = 0):
         #constant definition
@@ -50,6 +51,13 @@ class scheduler():
                 'SU':6
                 }
         instance_count = 0
+        
+        if not event and not event_template:
+            raise ValueError('An event_template or event need to be provided')
+        elif event_template:
+            event = self.newEvent(event_template = event_template,
+                                  start = datetime.datetime.combine(period_start_date,datetime.time(0,0)),
+                                  expirary_date = period_end_date)
         
         # -- set defualt parameter value
         if period_start_date == -1:
@@ -118,11 +126,13 @@ class scheduler():
             
             interval = int(by_daily_interval) + 1
             t_days = period_end_date - period_start_date
-            t_days = t_days.days
+            t_days = t_days.days + 1
             ndays = round((t_days - 1)/interval) + 1
             
             for i in range(ndays):
                 day = period_start_date + datetime.timedelta(days = i*interval)
+                if day > period_end_date:
+                    break
                 start_datetime = datetime.datetime.combine(day,datetime.time(0,0))
                 success = self.rescheduler(event,start_datetime,0)
                 if success:
@@ -441,7 +451,7 @@ class scheduler():
             
         return events
     
-    def newEventTemplate(self,event_name = '', event_type = '',calendar = '',duration = 0,
+    def newEventTemplate(self,event_name = '', event_type = '',calendar = 'primary',duration = 0,
                  days_till_expire = 0,urgency = 0, importance =0,reschedulability = 1, extensibility = 0,
                  shortenability = 0):
         
@@ -458,23 +468,23 @@ class scheduler():
                 }
         return event_template
     
-    def saveEventTemplate(self,event_template = {}):
+    def saveEventTemplate(self,event_template = {},file_name = ''):
         if event_template:
             cwd = os.getcwd()
             template_folder = cwd + '\\event_templates'
             if not os.path.exists(template_folder):
                 os.makedirs(template_folder)
-            
-            file_name = event_template['event_name']
+            if not file_name:
+                file_name = event_template['event_name']
             file = open(template_folder + '\\' + file_name + '.json','w')
             json.dump(event_template,file)
             file.close
     
-    def loadEventTemplate(self,template_name):
+    def loadEventTemplate(self,file_name):
         try:
             cwd= os.getcwd()
             template_folder = cwd+ '\\event_templates'
-            file = open(template_folder + '\\' + template_name + '.json','r')
+            file = open(template_folder + '\\' + file_name + '.json','r')
             event_template = json.load(file)
             return event_template
         except:
@@ -498,6 +508,7 @@ class scheduler():
                                                  event_template['event_name'], 
                                                  event_template['extensibility'], 
                                                  event_template['days_till_expire'],
+                                                 self.time_zone,
                                                  event_template['calendar'],
                                                  event_template['shortenability'])
                     
@@ -514,6 +525,7 @@ class scheduler():
                                                  event_name,
                                                  extensibility,
                                                  days_till_expire,
+                                                 self.time_zone,
                                                  calendar,
                                                  shortenability,
                                                  )

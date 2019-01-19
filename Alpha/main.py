@@ -104,87 +104,77 @@ def basic_health_event():
     
     calhelp.updateEvent(sch.service,dinner_event)
     
-
-def basic_study():
-    sch = scheduler.scheduler()
-    ECE_240 = calhelp.eventCreator(datetime.datetime(2019,1,14,00,00,00),
-                                   datetime.datetime(2019,1,14,2,00,00),
-                                   1,
-                                   datetime.date(2019,1,20),
-                                   'Basic Study',
-                                   5,
-                                   4,
-                                   'ECE 240 <general>'
-                                   )
-    ECE_240['cal_id'] = calhelp.getCalendarId(sch.service,'Study')
     
-    sch.scheduleDailyEvent(ECE_240)
+def createStudyTemplates():
+    sch =scheduler.scheduler()
+    ECE_240 = sch.newEventTemplate(event_name = 'ECE 240 Study',
+                                   event_type = 'Basic Study',
+                                   calendar = calhelp.getCalendarId(sch.service,'Study'),
+                                   duration = 120,
+                                   days_till_expire = 0,
+                                   urgency = 5,
+                                   importance = 4,
+                                   reschedulability = 1,
+                                   extensibility = 30,
+                                   shortenability = 0)
+    ECE_250 = sch.newEventTemplate(event_name = 'ECE 250 Study',
+                                   event_type = 'Basic Study',
+                                   calendar = calhelp.getCalendarId(sch.service,'Study'),
+                                   duration = 60,
+                                   days_till_expire = 0,
+                                   urgency = 5,
+                                   importance = 4,
+                                   reschedulability = 1,
+                                   extensibility = 30,
+                                   shortenability = 0)
+    ECE_222 = sch.newEventTemplate(event_name = 'ECE 222 Study',
+                                   event_type = 'Basic Study',
+                                   calendar = calhelp.getCalendarId(sch.service,'Study'),
+                                   duration = 60,
+                                   days_till_expire = 0,
+                                   urgency = 5,
+                                   importance = 4,
+                                   reschedulability = 1,
+                                   extensibility = 30,
+                                   shortenability = 0)
+    ECE_290 = sch.newEventTemplate(event_name = 'ECE 290 Study',
+                                   event_type = 'Basic Study',
+                                   calendar = calhelp.getCalendarId(sch.service,'Study'),
+                                   duration = 60,
+                                   days_till_expire = 0,
+                                   urgency = 5,
+                                   importance = 4,
+                                   reschedulability = 1,
+                                   extensibility = 30,
+                                   shortenability = 0)
     
-    ECE_250 = calhelp.eventCreator(datetime.datetime(2019,1,14,00,00,00),
-                                   datetime.datetime(2019,1,14,1,00,00),
-                                   1,
-                                   datetime.date(2019,1,20),
-                                   'Basic Study',
-                                   5,
-                                   4,
-                                   'ECE 250 <general>'
-                                   )
-    ECE_250['cal_id'] = calhelp.getCalendarId(sch.service,'Study')
-    sch.scheduleDailyEvent(ECE_250)
+    sch.saveEventTemplate(ECE_240,'ECE_240_Study')
+    sch.saveEventTemplate(ECE_250,'ECE_250_Study')
+    sch.saveEventTemplate(ECE_222,'ECE_290_Study')
+    sch.saveEventTemplate(ECE_290,'ECE_222_Study')
     
-    ECE_222 = calhelp.eventCreator(datetime.datetime(2019,1,14,00,00,00),
-                                   datetime.datetime(2019,1,14,1,00,00),
-                                   1,
-                                   datetime.date(2019,1,20),
-                                   'Basic Study',
-                                   5,
-                                   4,
-                                   'ECE 222 <general>'
-                                   )
-    ECE_222['cal_id'] = calhelp.getCalendarId(sch.service,'Study')
-    sch.scheduleDailyEvent(ECE_222)
-
-    ECE_290 = calhelp.eventCreator(datetime.datetime(2019,1,14,00,00,00),
-                                   datetime.datetime(2019,1,14,1,00,00),
-                                   1,
-                                   datetime.date(2019,1,18),
-                                   'Basic Study',
-                                   5,
-                                   4,
-                                   'ECE 290 <general>'
-                                   )
-    ECE_290['cal_id'] = calhelp.getCalendarId(sch.service,'Study')
-    sch.scheduleDailyEvent(ECE_290,by_daily = True, by_daily_interval = 1)
     
 if __name__ == '__main__':
     #basic_study()
     sch = scheduler.scheduler()
-    shower_week_event = calhelp.eventCreator(datetime.datetime(2019,1,13,23,0),
-                                       datetime.datetime(2019,1,13,23,25),
-                                        0,
-                                        -999,
-                                        'Helath',
-                                        5,
-                                        5,
-                                        'Shower',
-                                        -120)
-    
-    shower_week_event = calhelp.createRecurringEvent(shower_week_event,'SU,MO,TU,WE,TH')
-    shower_week_event['cal_id'] = calhelp.getCalendarId(sch.service,'Health')
-    
-    shower_weekend_event = calhelp.eventCreator(datetime.datetime(2019,1,18,23,0),
-                                       datetime.datetime(2019,1,18,23,25,0),
-                                        0,
-                                        -999,
-                                        'Helath',
-                                        5,
-                                        5,
-                                        'Shower',
-                                        -120)
-    
-    shower_weekend_event = calhelp.createRecurringEvent(shower_weekend_event,'FR,SA')
-    shower_weekend_event['cal_id'] = calhelp.getCalendarId(sch.service,'Health')
-    
-    calhelp.updateEvent(sch.service,shower_weekend_event)
-    
-    calhelp.updateEvent(sch.service,shower_week_event)
+    createStudyTemplates()
+    ECE240 = sch.loadEventTemplate('ECE_240_Study')
+    ECE250 = sch.loadEventTemplate('ECE_250_Study')
+    ECE222 = sch.loadEventTemplate('ECE_222_Study')
+    ECE290 = sch.loadEventTemplate('ECE_290_Study')
+    sch.scheduleDailyEvent(ECE240,by_daily = True,
+                           by_daily_interval = 0,
+                           period_start_date = datetime.date(2019,1,21),
+                           period_end_date = datetime.date(2019,1,25))
+    sch.scheduleDailyEvent(ECE290,by_week = True,
+                           by_week_day = 'TU,TH',
+                           period_start_date = datetime.date(2019,1,21),
+                           period_end_date = datetime.date(2019,1,25))
+    sch.scheduleDailyEvent(ECE250,by_daily = True,
+                           by_daily_interval = 0,
+                           period_start_date = datetime.date(2019,1,21),
+                           period_end_date = datetime.date(2019,1,25))
+    sch.scheduleDailyEvent(ECE222,by_daily = True,
+                           by_daily_interval = 0,
+                           period_start_date = datetime.date(2019,1,21),
+                           period_end_date = datetime.date(2019,1,25))
