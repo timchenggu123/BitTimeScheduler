@@ -1,6 +1,7 @@
 import calendarHelperFun as calhelp
 import connection
 import datetime
+import json
 
 class scheduler():
     
@@ -293,24 +294,31 @@ class scheduler():
         return True 
     
     def extensibilityFilter(self,all_events,extensibility):
+        '''right now can only increase he length of free events'''
+        '''needs more work'''
         remove_list = list()
-        i = 0
+        
         for i in range(len(all_events)):
             event = all_events[i]
-            custom_tag = calhelp.getCustomTags(event)
-            extensibility = custom_tag['extensibility']
-            if extensibility !=0 
-                if i != len(all_events):
-                    next_event = all_events[i+1]
-                    next_event_tags = calhelp.getCustomTags(next_event)
-                    if next_event_tags['reschedulability'] <= -1:
-                        all_events[i+1]['shrinkable_by'] = extensibility
-                    elif next_event_tags['extensibility'] < 0 & extensibility > 0:
-                        
+            custom_tags = calhelp.getCustomTags(event)
+            shortenability = custom_tags['shortenability']
+            reschedulability = custom_tags['reschedulability']
+            
+            if shortenability !=0:
+
+                if reschedulability <= -1:
+                    if i == 0:
+                        next_custom_tags = calhelp.getCustomTags(all_events[i+1])
+                        all_events[i]['extendable_by'] = next_custom_tags['shortenability']
                             
+                    elif i == len(all_events) -1:
+                        prev_custom_tags = calhelp.getCustomTags(all_events[i-1])
+                        all_events[i]['extendable_by'] = prev_custom_tags['shortenability']
+                    else:
+                        next_custom_tags = calhelp.getCustomTags(all_events[i+1])
+                        prev_custom_tags = calhelp.getCustomTags(all_events[i-1])
+                        all_events[i]['extendable_by'] = next_custom_tags['shortenability'] + prev_custom_tags['shortenability']
                         
-        for event in remove_list:
-            all_events.remove(event)
         
         return all_events
     
@@ -329,7 +337,7 @@ class scheduler():
     def timeFitFilter(self,all_events,duration):
         remove_list = list()
         for event in all_events:
-            event_duration = calhelp.getEventDuration(event)
+            event_duration = calhelp.getEventDuration(event) + event.get('extendable_by',0)
             if event_duration < duration:
                 remove_list.append(event)
         for event in remove_list:
@@ -389,7 +397,7 @@ class scheduler():
         '''This ranks how well the event fits the given slot'''
         
         for event in events:
-            event_duration = calhelp.getEventDuration(event)
+            event_duration = calhelp.getEventDuration(event) + event.get('extendable_by',0)
             time_fit_score = self.timeFitScoreCalculator(event_duration,duration)
             event['time_fit_score'] = time_fit_score
             
@@ -431,6 +439,25 @@ class scheduler():
             event['IUScore'] = event_IUScore
             
         return events
+    
+    def newEventTemplate(self,event_name = '', event_type = '',calendar = '',duration = 0,
+                 days_till_expire = 0,urgency = 0, importance =0,reschedulability = 1, extensibility = 0,
+                 shortenability = 0):
+        
+        event_template = {'event_name':event_name,
+                          'event_type': event_type,
+                          'calendar':calendar,
+                          'duration':duration,
+                          'days_till_expire': days_till_expire,
+                          'urgency':urgency,
+                          'importance':importance,
+                          'reschedulability':reschedulability,
+                          'extensibility':extensibility
+                          
+                }
+        return event_template
+    
+        
 
 #test
 if __name__ == '__main__':

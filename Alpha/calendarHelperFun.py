@@ -57,7 +57,7 @@ def getEventStartEnd(event):
 def eventCreator(start, end, reschedulability, 
                  expirary_date, event_type, urgency,
                  importance, custom_name = -1, extensibility = 0, days_till_expire = 0,
-                 time_zone = 'America/Toronto',cal_id = 'primary'):
+                 time_zone = 'America/Toronto',cal_id = 'primary',shortenability = 0):
 
     if custom_name == -1:
         custom_name = event_type
@@ -94,7 +94,8 @@ def eventCreator(start, end, reschedulability,
                        "&event_type:" + str(event_type) +
                        "&urgency:" + str(urgency) +
                        "&importance:" + str(importance) +
-                       "&extensibility:" + str(extensibility))
+                       "&extensibility:" + str(extensibility)
+                       "&shortenability:" + str(shortenability))
                         
     event['description'] = description_info
     event_duration_timedelta = str2time(end) - str2time(start)
