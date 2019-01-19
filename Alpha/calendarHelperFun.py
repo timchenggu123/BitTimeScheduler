@@ -436,6 +436,8 @@ def createRecurringEvent(event,by_day ='MO,TU,WE,TH,FR,SA,SU',until = 0):
         
     event['recurrence'].append( 'RRULE:FREQ=WEEKLY;'+ until_statement+'BYDAY=' + by_day)
     return event
+
+
     
 
 

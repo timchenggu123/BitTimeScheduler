@@ -294,11 +294,21 @@ class scheduler():
     
     def extensibilityFilter(self,all_events,extensibility):
         remove_list = list()
-        for event in all_events :
+        i = 0
+        for i in range(len(all_events)):
+            event = all_events[i]
             custom_tag = calhelp.getCustomTags(event)
-            if custom_tag['extensibility'] < 0 and custom_tag['extensibility'] < extensibility :\
-                remove_list.append(event)
-                
+            extensibility = custom_tag['extensibility']
+            if extensibility !=0 
+                if i != len(all_events):
+                    next_event = all_events[i+1]
+                    next_event_tags = calhelp.getCustomTags(next_event)
+                    if next_event_tags['reschedulability'] <= -1:
+                        all_events[i+1]['shrinkable_by'] = extensibility
+                    elif next_event_tags['extensibility'] < 0 & extensibility > 0:
+                        
+                            
+                        
         for event in remove_list:
             all_events.remove(event)
         
