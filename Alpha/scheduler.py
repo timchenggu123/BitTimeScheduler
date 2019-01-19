@@ -453,8 +453,8 @@ class scheduler():
                           'urgency':urgency,
                           'importance':importance,
                           'reschedulability':reschedulability,
-                          'extensibility':extensibility
-                          
+                          'extensibility':extensibility,
+                          'shortenability':shortenability,
                 }
         return event_template
     
@@ -472,11 +472,55 @@ class scheduler():
     
     def loadEventTemplate(self,template_name):
         try:
-            file = open('.\\event_templates' + template_name + '.json','r')
+            cwd= os.getcwd()
+            template_folder = cwd+ '\\event_templates'
+            file = open(template_folder + '\\' + template_name + '.json','r')
             event_template = json.load(file)
             return event_template
         except:
             raise FileNotFoundError('Cannot load template. File might not exist')
+            return {}
+        
+    def newEvent(self,event_template = {}, event_name = '', event_type = '',calendar = '',start = 0,
+                 end = 0,duration = 0,expirary_date = 0,
+                 days_till_expire = 0,urgency = 0, importance =0,reschedulability= 1, extensibility = 0,
+                 shortenability = 0):
+    
+                if event_template:
+                    if end == 0:
+                        end = start + datetime.timedelta(minutes = event_template['duration'])
+                    event = calhelp.eventCreator(start, end,
+                                                 event_template['reschedulability'], 
+                                                 expirary_date, 
+                                                 event_template['event_type'], 
+                                                 event_template['urgency'],
+                                                 event_template['importance'], 
+                                                 event_template['event_name'], 
+                                                 event_template['extensibility'], 
+                                                 event_template['days_till_expire'],
+                                                 event_template['calendar'],
+                                                 event_template['shortenability'])
+                    
+                    return event
+                else:
+                    if end == 0:
+                        end = start + datetime.timedelta(minutes = duration)
+                    event = calhelp.eventCreator(start,end,
+                                                 reschedulability,
+                                                 expirary_date,
+                                                 event_type,
+                                                 urgency,
+                                                 importance,
+                                                 event_name,
+                                                 extensibility,
+                                                 days_till_expire,
+                                                 calendar,
+                                                 shortenability,
+                                                 )
+                    return event
+                    
+                    
+                        
 #test
 if __name__ == '__main__':
     '''
