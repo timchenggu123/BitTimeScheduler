@@ -94,7 +94,7 @@ def eventCreator(start, end, reschedulability,
                        "&event_type:" + str(event_type) +
                        "&urgency:" + str(urgency) +
                        "&importance:" + str(importance) +
-                       "&extensibility:" + str(extensibility)
+                       "&extensibility:" + str(extensibility),
                        "&shortenability:" + str(shortenability))
                         
     event['description'] = description_info

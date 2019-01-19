@@ -2,6 +2,7 @@ import calendarHelperFun as calhelp
 import connection
 import datetime
 import json
+import os
 
 class scheduler():
     
@@ -457,10 +458,28 @@ class scheduler():
                 }
         return event_template
     
-        
-
+    def saveEventTemplate(self,event_template = {}):
+        if event_template:
+            cwd = os.getcwd()
+            template_folder = cwd + '\\event_templates'
+            if not os.path.exists(template_folder):
+                os.makedirs(template_folder)
+            
+            file_name = event_template['event_name']
+            file = open(template_folder + '\\' + file_name + '.json','w')
+            json.dump(event_template,file)
+            file.close
+    
+    def loadEventTemplate(self,template_name):
+        try:
+            file = open('.\\event_templates' + template_name + '.json','r')
+            event_template = json.load(file)
+            return event_template
+        except:
+            raise FileNotFoundError('Cannot load template. File might not exist')
 #test
 if __name__ == '__main__':
+    '''
     sch = scheduler()
     start = datetime.datetime.now() + datetime.timedelta(minutes = 60)
     end = datetime.datetime.now() + datetime.timedelta(minutes = 120)
@@ -468,6 +487,6 @@ if __name__ == '__main__':
     calid = calhelp.getCalendarId(sch.service,'Health')
     sch.addBucketList(event1,calid)
     sch.showBucketList()
-    sch.scheduleBucketList()
+    sch.scheduleBucketList()'''
                 
     
