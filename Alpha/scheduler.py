@@ -214,9 +214,10 @@ class scheduler():
                 new_target_event = ranked_events[0]
                 new_start_datetime = calhelp.str2time(new_target_event['end']['dateTime'])
 
-                days_lapsed = new_start_datetime.date() - start_datetime.date()
-                days_lapsed = days_lapsed.day
-                new_for_ndays = for_ndays - days_lapsed
+                #days_lapsed = new_start_datetime.date() - start_datetime.date()
+                #days_lapsed = days_lapsed.day
+                #new_for_ndays = for_ndays - days_lapsed
+                new_for_ndays = calhelp.calcEventExpireDays(new_target_event)
                 
                 success = self.rescheduler(new_target_event,new_start_datetime,new_for_ndays)
                 
