@@ -262,7 +262,10 @@ def getCalendarId(service,calendar_summary):
     return -1
         
 def getEvents(service,calId,start_datetime,search_for_ndays):
-    end_datetime = start_datetime + datetime.timedelta(days = int(search_for_ndays) + 1) #+1 here because timeMax is exclusive
+    '''do not use this unless you intend to pull only raw Google Calendar Events from 
+    the server. This is intended to be used as a component for methods such as getAllEvents()'''
+    end_datetime = start_datetime.date() + datetime.timedelta(days = int(search_for_ndays) + 1) #+1 here because timeMax is exclusive
+    end_datetime = datetime.datetime.combine(end_datetime, datetime.time(0,0)) #note the end time always at 0:00
     
     start_datetime = utcFormat(start_datetime)
     end_datetime = utcFormat(end_datetime)
@@ -285,9 +288,12 @@ def getEventDuration(event):
     
     
 def getAllEvents(service,start_datetime,search_for_ndays,cal_presets = {}):
+    #pulling all available calendars from server
     calendar_result = service.calendarList().list().execute()
     calendars = calendar_result.get('items',[])
     all_events = []
+    
+    #Now looping through the calendars to get all events
     for calendar in calendars:
         cal_id = calendar['id']
         events = getEvents(service,cal_id,start_datetime,search_for_ndays)

@@ -39,7 +39,7 @@ class scheduler():
             
     def scheduleDailyEvent(self,event_template = {}, event = {},period_start_date = -1,period_end_date = -1,by_week = False,
                            by_week_day = 'MO,TU,WE,TH,FR', by_daily = False,
-                           by_daily_interval = 0):
+                           by_daily_interval = 0,default_start_time = datetime.time(0,0)):
         #constant definition
         week_day_dict = {
                 'MO':0,
@@ -56,7 +56,7 @@ class scheduler():
             raise ValueError('An event_template or event need to be provided')
         elif event_template:
             event = self.newEvent(event_template = event_template,
-                                  start = datetime.datetime.combine(period_start_date,datetime.time(0,0)),
+                                  start = datetime.datetime.combine(period_start_date,default_start_time),
                                   expirary_date = period_end_date)
         
         # -- set defualt parameter value
@@ -115,7 +115,7 @@ class scheduler():
                 day = period_start_date + datetime.timedelta(days = i)
                 week_day = day.weekday()
                 if week_day in week_days:
-                    start_datetime = datetime.datetime.combine(day,datetime.time(0,0))
+                    start_datetime = datetime.datetime.combine(day,default_start_time)
                     success = self.rescheduler(event,start_datetime,0)
                     if success:
                         instance_count += 1
@@ -133,7 +133,7 @@ class scheduler():
                 day = period_start_date + datetime.timedelta(days = i*interval)
                 if day > period_end_date:
                     break
-                start_datetime = datetime.datetime.combine(day,datetime.time(0,0))
+                start_datetime = datetime.datetime.combine(day,default_start_time)
                 success = self.rescheduler(event,start_datetime,0)
                 if success:
                     instance_count += 1
@@ -217,7 +217,7 @@ class scheduler():
                 #days_lapsed = new_start_datetime.date() - start_datetime.date()
                 #days_lapsed = days_lapsed.day
                 #new_for_ndays = for_ndays - days_lapsed
-                new_for_ndays = calhelp.calcEventExpireDays(new_target_event)
+                new_for_ndays = calhelp.calcEventExpireDays(new_target_event)   
                 
                 success = self.rescheduler(new_target_event,new_start_datetime,new_for_ndays)
                 
@@ -345,18 +345,7 @@ class scheduler():
             all_events.remove(event)
             
         return all_events
-    
-    def timeFitFilter(self,all_events,duration):
-        remove_list = list()
-        for event in all_events:
-            event_duration = calhelp.getEventDuration(event) + event.get('extendable_by',0)
-            if event_duration < duration:
-                remove_list.append(event)
-        for event in remove_list:
-            all_events.remove(event)
-                
-        return all_events
-    
+
     def ranker(self,events,target_event):
         print('ranking candidates...')
         target_duration = calhelp.getEventDuration(target_event)
@@ -371,6 +360,18 @@ class scheduler():
         events = sorted(events,key = lambda s: s['score'], reverse = True)
         
         return events
+    
+    def timeFitFilter(self,all_events,duration):
+        remove_list = list()
+        for event in all_events:
+            event_duration = calhelp.getEventDuration(event) + event.get('extendable_by',0)
+            if event_duration < duration:
+                remove_list.append(event)
+        for event in remove_list:
+            all_events.remove(event)
+                
+        return all_events
+    
     
     def timeLagRanker(self,events,target_event,weight = 1):
         '''This ranks events slots by calculating how far back the event has 
@@ -451,6 +452,18 @@ class scheduler():
             event['IUScore'] = event_IUScore
             
         return events
+    
+    def stressRanker(self,events,target_event):
+        '''this is intended to rank events based on how stressful it would be to schedule the event'''
+        
+    
+    def eventTypeDef(self,definitions):
+        '''definitions should be dictionaries'''
+        '''This is intended to access the stress level of day by assigning stress level to corresponding
+        types of events'''
+        '''however, it is still to be determined whether assigning stress level to event type or to individual
+        event would be better'''
+        type_def = {}
     
     def newEventTemplate(self,event_name = '', event_type = '',calendar = 'primary',duration = 0,
                  days_till_expire = 0,urgency = 0, importance =0,reschedulability = 1, extensibility = 0,
