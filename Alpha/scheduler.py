@@ -3,6 +3,8 @@ import connection
 import datetime
 import json
 import os
+import warnings
+import math
 
 class scheduler():
     
@@ -352,9 +354,10 @@ class scheduler():
         events = self.timeFitRanker(events,target_duration)
         events = self.IUScaleRanker(events,target_event)
         events = self.timeLagRanker(events,target_event)
+        events = self.stressRanker(events)
         
         for event in events:
-            event_total_score = event['time_fit_score'] + event['IUScore'] + event['time_lag_score']
+            event_total_score = event['time_fit_score'] + event['IUScore'] + event['time_lag_score'] + event['stress_score']
             event['score'] = event_total_score
             
         events = sorted(events,key = lambda s: s['score'], reverse = True)
@@ -453,18 +456,98 @@ class scheduler():
             
         return events
     
-    def stressRanker(self,events,target_event):
+    def stressRanker(self,events):
         '''this is intended to rank events based on how stressful it would be to schedule the event'''
+        '''right now the design idea is to loop through each day and count event types then assign socres'''
         
+        '''pending tests to be written and run: 1.with a event period less than 2 days. 2.with event types that 
+        are not defined for stress level'''
+        
+        # variable initialization
+        all_events = list()
+        day_events = list()
+        date_changed_once = 0
+        first_loop = 1
+        stress_level = 0
+        stress_def = self.getEventStressDef()
+
+        
+        for event in events:
+            event_date = calhelp.str2time(event['start']['dateTime'])
+            event_date = event_date.date()
+            if first_loop:
+                temp_date = event_date
+                first_loop = 0
+                
+            if event_date != temp_date:
+                date_changed = 1
+                date_changed_once = 1
+            else:   
+                date_changed = 0
+            
+            temp_date = event_date.date()
+            
+            
+            if date_changed:
+                for event in day_events:
+                    stress_score= 2/(1+math.exp(-1*stress_level)) - 1
+                    event['stress_score'] = stress_score
+                    
+                all_events = all_events + day_events
+                stress_level = 0
+                day_events = list()
+                
+            day_events.append(event)
+            event_tags = calhelp.getCustomTags(event)
+            event_type = event_tags['event_type']
+            stress_level += stress_def.get(event_type,-99)
+            if stress_level == -99:
+                warnings.warn('No event_type definitions for ' + event_type + ' found. Value 0 will be used')
+                stress_level = 0
+            
+        if not date_changed_once:
+            
+            for event in day_events:
+                event['stress_score'] = stress_level
+            
+            all_events = all_events + day_events
+            
+        return all_events
+            
     
-    def eventTypeDef(self,definitions):
+    def addEventStressDef(self,definitions):
         '''definitions should be dictionaries'''
         '''This is intended to access the stress level of day by assigning stress level to corresponding
         types of events'''
         '''however, it is still to be determined whether assigning stress level to event type or to individual
         event would be better'''
-        type_def = {}
+        
+        
+        if definitions:
+            cwd = os.getcwd()
+            definition_folder= cwd + '\\event_definitions'
+            if not os.path.exists(definition_folder):
+                os.makedirs(definition_folder)
+                
+            file_name = 'stress_definitions'
+            file = open(definition_folder + '\\' + file_name + '.json','w')
+            json.dump(definitions,file)
+            file.close
+        else:
+            raise ValueError('No definition provided')
     
+    def getEventStressDef(self):
+        try:
+            cwd= os.getcwd()
+            template_folder = cwd+ '\\event_definitions'
+            file_name = 'stress_definitions'
+            file = open(template_folder + '\\' + file_name + '.json','r')
+            event_template = json.load(file)
+            return event_template
+        except:
+            raise FileNotFoundError('Cannot load template. File might not exist')
+            return {}
+        
     def newEventTemplate(self,event_name = '', event_type = '',calendar = 'primary',duration = 0,
                  days_till_expire = 0,urgency = 0, importance =0,reschedulability = 1, extensibility = 0,
                  shortenability = 0):
@@ -483,6 +566,10 @@ class scheduler():
         return event_template
     
     def saveEventTemplate(self,event_template = {},file_name = ''):
+        
+        '''file name is optional parameter. by default the file name is the
+        name of the event'''
+        
         if event_template:
             cwd = os.getcwd()
             template_folder = cwd + '\\event_templates'
