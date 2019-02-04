@@ -469,8 +469,11 @@ class scheduler():
         date_changed_once = 0
         first_loop = 1
         stress_level = 0
-        stress_def = self.getEventStressDef()
-
+        try:
+            stress_def = self.getEventStressDef()
+        except:
+            warnings.warn('Cannot load Stress Definitions. Please create stress definitions.')
+            stress_def = {}
         
         for event in events:
             event_date = calhelp.str2time(event['start']['dateTime'])
@@ -485,7 +488,7 @@ class scheduler():
             else:   
                 date_changed = 0
             
-            temp_date = event_date.date()
+            temp_date = event_date
             
             
             if date_changed:
@@ -545,7 +548,7 @@ class scheduler():
             event_template = json.load(file)
             return event_template
         except:
-            raise FileNotFoundError('Cannot load template. File might not exist')
+            raise FileNotFoundError('Cannot load stress definition. File might not exist')
             return {}
         
     def newEventTemplate(self,event_name = '', event_type = '',calendar = 'primary',duration = 0,

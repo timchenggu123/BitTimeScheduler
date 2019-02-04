@@ -169,8 +169,8 @@ def createDownTimeTemplate():
 if __name__ == '__main__':
     #basic_study()
     sch = scheduler.scheduler()
-    createStudyTemplates()
-    createDownTimeTemplate()
+    #createStudyTemplates()
+    #createDownTimeTemplate()
     ECE240 = sch.loadEventTemplate('ECE_240_Study')
     ECE250 = sch.loadEventTemplate('ECE_250_Study')
     ECE222 = sch.loadEventTemplate('ECE_222_Study')
@@ -178,8 +178,8 @@ if __name__ == '__main__':
     
     Down_Time = sch.loadEventTemplate('Down_Time')
     
-    start_date = datetime.date(2019,1,28)
-    end_date = datetime.date(2019,2,1)
+    start_date = datetime.date(2019,2,5)
+    end_date = datetime.date(2019,2,8)
     
     sch.scheduleDailyEvent(Down_Time,by_daily = True,
                            by_daily_interval = 0,
