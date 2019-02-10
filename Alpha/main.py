@@ -178,8 +178,8 @@ if __name__ == '__main__':
     
     Down_Time = sch.loadEventTemplate('Down_Time')
     
-    start_date = datetime.date(2019,2,5)
-    end_date = datetime.date(2019,2,8)
+    start_date = datetime.date(2019,2,11)
+    end_date = datetime.date(2019,2,15)
     
     sch.scheduleDailyEvent(Down_Time,by_daily = True,
                            by_daily_interval = 0,
